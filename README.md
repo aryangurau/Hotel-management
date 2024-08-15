@@ -1,2 +1,2 @@
-# Hotel-management
-batch-10-be
+# Hotel-management-App
+batch-10-backend
