@@ -12,7 +12,7 @@ const register = async (payload) => {
   const newUser = await Model.create(rest);
   if (!newUser) throw new Error("User registration failed. Try again later");
   const myToken = genOTP();
-  console.log({ myToken });
+
   await Model.updateOne({ email: newUser.email }, { token: myToken });
 
   return { data: null, msg: "please check your email for verification" };
