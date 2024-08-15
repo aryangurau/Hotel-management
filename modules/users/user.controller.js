@@ -10,7 +10,7 @@ const register = async (payload) => {
   if (userExist) throw new Error("This email has already taken");
   rest.password = genHash(password);
   const newUser = await Model.create(rest);
-  if (!newUser) throw new Error("User registration faild. Try again later");
+  if (!newUser) throw new Error("User registration failed. Try again later");
   const myToken = genOTP();
   console.log({ myToken });
   await Model.updateOne({ email: newUser.email }, { token: myToken });
