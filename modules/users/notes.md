@@ -12,3 +12,22 @@
 2.user find using email + is blocked ? isAcive
 3.compare password withh db stored pw.
 4.generate token and return token
+
+#steps for genForgetPasswordToken
+
+1.check email for user; isBlocked? , isActive?
+2.generate new token(otp)
+2.send token to user in email
+3.store token in database in user data 5.
+
+#steps for verifyForgetPasswordToken
+1.check email for user ; isBlocked? , isActive?
+2.check token for user
+3.token match; newPassword hash
+4.update user data in database with hash and empty token field
+
+#steps for changing password
+1.check email for user ; isBlocked? , isActive?
+2.compare the old password stored in db
+3.generate hash of newPassword
+4.update the user data with newPassword

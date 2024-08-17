@@ -1,7 +1,7 @@
 const router = require("express").Router();
 const multer = require("multer");
 const controller = require("./user.controller");
-const { validate } = require("./user.validation");
+const { validate, forgetPasswordvalidation } = require("./user.validation");
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -43,4 +43,54 @@ router.post("/verify-email", async (req, res, next) => {
     next(err);
   }
 });
+
+router.post("/generate-fp-token", async (req, res, next) => {
+  try {
+    const result = await controller.genForgetPasswordToken(req.body);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post(
+  "/verify-fp-token",
+  forgetPasswordvalidation,
+  async (req, res, next) => {
+    try {
+      const result = await controller.verifyForgetPasswordToken(req.body);
+      res.json({ data: result, msg: "password changed successfully" });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.put("/changePassword", async (req, res, next) => {
+  try {
+    const result = await controller.changePassword(req.body);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.put("/resetPassword", async (req, res, next) => {
+  try {
+    const result = await controller.resetPassword(req.body);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.patch("/blockUser", async (req, res, next) => {
+  try {
+    const result = await controller.blockUser(req.body);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;
