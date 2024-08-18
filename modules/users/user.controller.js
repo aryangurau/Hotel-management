@@ -10,7 +10,11 @@ const register = async (payload) => {
   //check if user email is already exists or not
   const userExist = await Model.findOne({ email: rest.email });
   if (userExist) throw new Error("This email has already taken");
-  //hash the text pasaword
+  const nameExist = await Model.findOne({ name: rest.name });
+  if (nameExist) throw new Error("UserName Already Taken");
+  const phone = await Model.findOne({ phone: rest.phone });
+
+  //hash the text password
   rest.password = genHash(password);
   //register the user into database
   const newUser = await Model.create(rest);
@@ -184,8 +188,26 @@ const blockUser = async ({ email }) => {
 };
 const createUser = () => {};
 const list = () => {}; //advance data operation
-const getByID = () => {};
-const updateByID = () => {};
+
+const getUserByID = async ({ userId }) => {
+  const user = await Model.findOne({ userId, isActive: true });
+  // console.log(user);
+  if (!user) throw new Error("user not found");
+  // return Model.findOne({ number });
+  return { data: user, msg: "user found sucessfully" };
+};
+const updateByID = async ({ userId, newName }) => {
+  const user = await Model.findOne({ userId, isActive: true });
+  // console.log(user);
+  if (!user) throw new Error("user not found");
+  const updatedUser = await Model.findOneAndUpdate(
+    { userId },
+    { name: newName },
+    { new: true }
+  );
+  if (!updatedUser) throw new Error("user not updated");
+  return { data: updatedUser?.name, msg: "user updated  sucessfully" };
+};
 
 module.exports = {
   create,
@@ -199,6 +221,7 @@ module.exports = {
   resetPassword,
   blockUser,
   list,
-  getByID,
+  getUserByID,
+  updateByID,
   updateProfile,
 };

@@ -92,5 +92,24 @@ router.patch("/blockUser", async (req, res, next) => {
     next(err);
   }
 });
+router.post("/getUserByID", async (req, res, next) => {
+  try {
+    const result = await controller.getUserByID(req?.body);
+    console.log(result);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/updateByID", async (req, res, next) => {
+  try {
+    const result = await controller.updateByID(req?.body);
+    console.log(result);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
 
 module.exports = router;
