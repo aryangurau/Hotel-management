@@ -2,6 +2,7 @@ const router = require("express").Router();
 const multer = require("multer");
 const controller = require("./user.controller");
 const { validate, forgetPasswordvalidation } = require("./user.validation");
+const { secureAPI } = require("../../utils/secure");
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -66,17 +67,22 @@ router.post(
   }
 );
 
-router.put("/changePassword", async (req, res, next) => {
-  try {
-    const result = await controller.changePassword(req.body);
-    res.json(result);
-  } catch (err) {
-    next(err);
+router.put(
+  "/changePassword",
+  secureAPI(["admin", "user"]),
+  async (req, res, next) => {
+    try {
+      const result = await controller.changePassword(req.body);
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
   }
-});
+);
 
-router.put("/resetPassword", async (req, res, next) => {
+router.put("/resetPassword", secureAPI(["admin"]), async (req, res, next) => {
   try {
+    console.log("i am here");
     const result = await controller.resetPassword(req.body);
     res.json(result);
   } catch (err) {
@@ -84,7 +90,7 @@ router.put("/resetPassword", async (req, res, next) => {
   }
 });
 
-router.patch("/blockUser", async (req, res, next) => {
+router.patch("/blockUser", secureAPI(["admin"]), async (req, res, next) => {
   try {
     const result = await controller.blockUser(req.body);
     res.json(result);
@@ -92,6 +98,47 @@ router.patch("/blockUser", async (req, res, next) => {
     next(err);
   }
 });
+
+router.post("/", secureAPI(["admin"]), async (req, res, next) => {
+  try {
+    const result = await controller.create(req.body);
+    res.json({ data: result, msg: "user created successfully" });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/:id", secureAPI(["admin"]), async (req, res, next) => {
+  try {
+    const result = await controller.getById(req?.params?.id);
+    res.json({ data: result, msg: "user found by ID successfully" });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.put("/profile", secureAPI(["admin", "user"]), async (req, res, next) => {
+  try {
+    const result = await controller.updateProfile(req.body);
+    res.json({ data: result, msg: "profile updated successfully" });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.put("/:id", secureAPI(["admin"]), async (req, res, next) => {
+  try {
+    const result = await controller.updateById({
+      id: req?.params?.id,
+      payload: req.body,
+    });
+    res.json({ data: result, msg: "user data updated by ID successfully" });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/*
 router.post("/getUserByID", async (req, res, next) => {
   try {
     const result = await controller.getUserByID(req?.body);
@@ -111,5 +158,14 @@ router.post("/updateByID", async (req, res, next) => {
     next(err);
   }
 });
-
+router.get("/", async (req, res, next) => {
+  try {
+    const result = await controller.list(req?.params?.id);
+    console.log(result);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+*/
 module.exports = router;

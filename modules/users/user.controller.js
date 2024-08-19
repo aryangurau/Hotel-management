@@ -3,8 +3,6 @@ const { genHash, compareHash } = require("../../utils/secure");
 const { genOTP, genToken } = require("../../utils/token");
 const { sendEmail } = require("../../services/mailer");
 
-const create = (payload) => {};
-
 const register = async (payload) => {
   const { password, roles, isActive, ...rest } = payload;
   //check if user email is already exists or not
@@ -152,10 +150,15 @@ const changePassword = async ({ email, oldPassword, newPassword }) => {
   return { data: null, msg: "password changed successfully" };
 };
 
-const updateProfile = () => {};
+const updateProfile = async (payload) => {
+  const { updated_by: currentUser, ...rest } = payload;
+  return await Model.findOneAndUpdate({ _id: currentUser }, rest, {
+    new: true,
+  }).select("-password"); //special update case using role middleware
+};
 
 //Admin controllers
-const resetPassword = async ({ email, newPassword }) => {
+const resetPassword = async ({ email, newPassword, updated_by }) => {
   //1.check email for user
   const user = await Model.findOne({ email, isActive: true, isBlocked: false });
   if (!user) throw new Error("user not found");
@@ -164,20 +167,20 @@ const resetPassword = async ({ email, newPassword }) => {
   //3. update the user's database password with hashed password
   const updatedUser = await Model.findOneAndUpdate(
     { email },
-    { password },
+    { password, updated_by },
     { new: true }
   );
   if (!updatedUser) throw new Error("password reset failed");
   return { data: null, msg: " Password reset successfull" };
 };
-const blockUser = async ({ email }) => {
+const blockUser = async ({ email, updated_by }) => {
   //1. check if user exists
   const user = await Model.findOne({ email, isActive: true });
   if (!user) throw new Error("user not found");
   //2. update the user data with new block status//toggle status
   const updatedUser = await Model.findOneAndUpdate(
     { email },
-    { isBlocked: !user?.isBlocked },
+    { isBlocked: !user?.isBlocked, updated_by },
     { new: true }
   );
   if (!updatedUser) throw new Error("user block failed");
@@ -186,8 +189,33 @@ const blockUser = async ({ email }) => {
     msg: `User ${updatedUser?.isBlocked ? "blocked" : "unblocked"} succesfully`,
   };
 };
-const createUser = () => {};
-const list = () => {}; //advance data operation
+const create = async (payload) => {
+  const { password, updated_by, ...rest } = payload;
+  rest.isActive = true;
+  rest.created_by = updated_by;
+  rest.password = genHash(password);
+  const user = await Model.create(rest);
+  return Model.findOne({ email: user?.email }).select("-password");
+};
+const getById = (_id) => {
+  return Model.findOne({ _id }).select("-password");
+};
+const updateById = async ({ id, payload }) => {
+  const user = await Model.findOne({ _id: id });
+  if (!user) throw new Error("user not found");
+  return await Model.findOneAndUpdate({ _id: id }, payload, {
+    new: true,
+  }).select("-password");
+};
+/*
+const list = async () => {
+  // Fetch all users
+  const users = await Model.find({});
+  console.log(users); // or return users if needed
+
+  return { data: users, msg: "list of users found sucessfully" };
+};
+//advance data operation
 
 const getUserByID = async ({ userId }) => {
   const user = await Model.findOne({ userId, isActive: true });
@@ -208,7 +236,7 @@ const updateByID = async ({ userId, newName }) => {
   if (!updatedUser) throw new Error("user not updated");
   return { data: updatedUser?.name, msg: "user updated  sucessfully" };
 };
-
+*/
 module.exports = {
   create,
   register,
@@ -220,8 +248,8 @@ module.exports = {
   changePassword,
   resetPassword,
   blockUser,
-  list,
-  getUserByID,
-  updateByID,
+  // list,
+  getById,
+  updateById,
   updateProfile,
 };
