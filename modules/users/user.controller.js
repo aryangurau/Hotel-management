@@ -2,6 +2,7 @@ const Model = require("./user.model");
 const { genHash, compareHash } = require("../../utils/secure");
 const { genOTP, genToken } = require("../../utils/token");
 const { sendEmail } = require("../../services/mailer");
+const { boolean } = require("joi");
 
 const register = async (payload) => {
   const { password, roles, isActive, ...rest } = payload;
@@ -207,16 +208,79 @@ const updateById = async ({ id, payload }) => {
     new: true,
   }).select("-password");
 };
-/*
-const list = async () => {
-  // Fetch all users
-  const users = await Model.find({});
-  console.log(users); // or return users if needed
 
-  return { data: users, msg: "list of users found sucessfully" };
+const list = async ({ filter, search, page = 1, limit = 10 }) => {
+  // const { isBlocked, isActive } = filter;
+  let currentPage = +page;
+  currentPage = currentPage < 1 ? 1 : currentPage;
+  const { name } = search;
+  //multiple filter (role, status)
+  //search
+  //sorting
+  //pagination
+  const query = [];
+
+  if (filter?.isActive === "yes" || filter?.isActive === "no") {
+    query.push({
+      $match: {
+        isActive: filter?.isActive === "yes" ? true : false,
+      },
+    });
+  }
+  if (filter?.isBlocked == "yes" || filter?.isBlocked === "no") {
+    query.push({
+      $match: {
+        isBlocked: filter?.isBlocked === "yes" ? true : false,
+      },
+    });
+  }
+  if (name) {
+    query.push({ $match: { name: new RegExp(name, "gi") } });
+  }
+  query.push(
+    {
+      $facet: {
+        metadata: [
+          {
+            $count: "total",
+          },
+        ],
+        data: [
+          {
+            $skip: (currentPage - 1) * +limit,
+          },
+          {
+            $limit: +limit,
+          },
+        ],
+      },
+    },
+    {
+      $addFields: {
+        total: {
+          $arrayElemAt: ["$metadata.total", 0],
+        },
+      },
+    },
+    {
+      $project: {
+        metadata: 0,
+      },
+    }
+  );
+  console.log(query);
+
+  const result = await Model.aggregate(query);
+  return {
+    data: result[0]?.data,
+    page: +currentPage,
+    limit: +limit,
+    total: result[0]?.total || 0,
+  };
 };
 //advance data operation
 
+/*
 const getUserByID = async ({ userId }) => {
   const user = await Model.findOne({ userId, isActive: true });
   // console.log(user);
@@ -248,7 +312,7 @@ module.exports = {
   changePassword,
   resetPassword,
   blockUser,
-  // list,
+  list,
   getById,
   updateById,
   updateProfile,
