@@ -154,7 +154,9 @@ const list = async ({ filter, search, page = 1, limit = 10 }) => {
     total: result[0]?.total || 0,
   };
 };
-const remove = async () => {};
+const remove = async (id) => {
+  return await Model.findOneAndDelete({ roomNo: id });
+};
 
 module.exports = {
   createRoom,

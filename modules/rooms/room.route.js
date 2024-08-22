@@ -94,8 +94,10 @@ router.get("/list", async (req, res, next) => {
   }
 });
 
-router.delete("/remove", async (req, res, next) => {
+router.delete("/remove/:id", async (req, res, next) => {
   try {
+    const result = await roomController.remove(req?.params?.id);
+    res.json({ data: result, msg: "room deleted sucessfully" });
   } catch (err) {
     next(err);
   }
