@@ -162,7 +162,6 @@ module.exports = {
   createRoom,
   getById,
   updateById,
-  // updateStatus,
   list,
   remove,
   updateFilledStatus,
