@@ -210,14 +210,15 @@ const updateById = async ({ id, payload }) => {
 };
 
 const list = async ({ filter, search, page = 1, limit = 10 }) => {
-  // const { isBlocked, isActive } = filter;
-  let currentPage = +page;
-  currentPage = currentPage < 1 ? 1 : currentPage;
-  const { name } = search;
   //multiple filter (role, status)
   //search
   //sorting
   //pagination
+  // const { isBlocked, isActive } = filter;
+  let currentPage = +page;
+  currentPage = currentPage < 1 ? 1 : currentPage;
+  const { name } = search;
+
   const query = [];
 
   if (filter?.isActive === "yes" || filter?.isActive === "no") {
@@ -268,7 +269,6 @@ const list = async ({ filter, search, page = 1, limit = 10 }) => {
       },
     }
   );
-  console.log(query);
 
   const result = await Model.aggregate(query);
   return {
