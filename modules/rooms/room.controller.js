@@ -1,114 +1,23 @@
-const { model } = require("mongoose");
 const Model = require("./room.model");
 
-const createRoom = async (payload) => {
-  const { created_by, updated_by, ...rest } = payload;
-  rest.created_by = updated_by;
-  return await Model.create(rest);
-};
-
-const getById = async (id) => {
-  return await Model.findOne({ roomNo: id });
-};
-
-const updateById = async ({ id, payload }) => {
-  const room = await Model.findOne({ roomNo: id });
+const publicRooms = () => {
+  const room = Model.find({ roomStatus: "isEmpty" });
   if (!room) throw new Error("room not found");
-  return await Model.findOneAndUpdate({ roomNo: id }, payload, {
-    runValidators: true,
-    new: true,
-  });
+  return Model.find({ roomStatus: "isEmpty" });
 };
-const updateFilledStatus = async ({ id, payload }) => {
-  const room = await Model.findOne({ roomNo: id });
-  if (!room) throw new Error("room not found");
-  const { isFilled } = room;
-  const updatedRoom = await Model.findOneAndUpdate(
-    { roomNo: id }, //Filter by room number
-    { isFilled: !isFilled, ...payload }, // Update the status // Update additional fields from the payload
-    { new: true, runValidators: true }
-  );
-  return {
-    data: { isFilled: updatedRoom?.isFilled },
-    msg: `Room is ${updatedRoom?.isFilled ? "filled" : "notFilled"} `,
-  };
+const PublicRoomInfo = async (id) => {
+  const room = await Model.findOne({ roomNo: id, roomStatus: "isEmpty" });
+  if (!room) throw new Error("room may be Filled or booked");
+  return await Model.findOne({ roomNo: id, roomStatus: "isEmpty" });
 };
-const updateBookedStatus = async ({ id, payload }) => {
-  const room = await Model.findOne({ roomNo: id });
-  if (!room) throw new Error("room not found");
-  const { isBooked } = room;
-  const updatedRoom = await Model.findOneAndUpdate(
-    { roomNo: id }, //Filter by room number
-    { isBooked: !isBooked, ...payload }, // Update the status // Update additional fields from the payload
-    { new: true, runValidators: true }
-  );
-  return {
-    data: { isBooked: updatedRoom?.isBooked },
-    msg: `Room is ${updatedRoom?.isBooked ? "Booked" : "not Booked"} `,
-  };
-};
-const updateEmptyStatus = async ({ id, payload }) => {
-  const room = await Model.findOne({ roomNo: id });
-  if (!room) throw new Error("room not found");
-  const { isEmpty } = room;
-  const updatedRoom = await Model.findOneAndUpdate(
-    { roomNo: id }, //Filter by room number
-    { isEmpty: !isEmpty, ...payload }, // Update the status // Update additional fields from the payload
-    { new: true, runValidators: true }
-  );
-  return {
-    data: { isEmpty: updatedRoom?.isEmpty },
-    msg: `Room is ${updatedRoom?.isEmpty ? "Empty" : "not empty"} `,
-  };
-};
-
-const checkAllStatus = async ({ id, payload }) => {
-  const room = await Model.findOne({ roomNo: id });
-  if (!room) throw new Error("room not found");
-  const { isFilled, isBooked, isEmpty } = room;
-  const updatedRoom = await Model.findOneAndUpdate(
-    { roomNo: id },
-    { isFilled: isFilled, isBooked: isBooked, isEmpty: isEmpty },
-    { new: true }
-  );
-  return {
-    data: {
-      isFilled: updatedRoom?.isFilled,
-      isBooked: updatedRoom?.isBooked,
-      isEmpty: updatedRoom?.isEmpty,
-    },
-    msg: `Room is${updatedRoom?.isFilled ? "filled" : "not filled"}  ,Room is${
-      updatedRoom?.isBooked ? "Booked" : "not Booked"
-    }  ,Room is${updatedRoom?.isEmpty ? "empty" : "not empty"} `,
-  };
-};
-
 const list = async ({ filter, search, page = 1, limit = 10 }) => {
   let currentPage = +page;
   currentPage = currentPage < 1 ? 1 : currentPage;
   const { roomType } = search;
-  const query = [];
 
-  if (filter?.isFilled === "yes" || filter?.isFilled === "no") {
-    query.push({
-      $match: {
-        isFilled: filter?.isFilled === "yes" ? true : false,
-      },
-    });
-  }
-  if (filter?.isBooked == "yes" || filter?.isBooked === "no") {
-    query.push({
-      $match: {
-        isBooked: filter?.isBooked === "yes" ? true : false,
-      },
-    });
-  }
-  if (filter?.isEmpty == "yes" || filter?.isEmpty === "no") {
-    query.push({
-      $match: {
-        isEmpty: filter?.isEmpty === "yes" ? true : false,
-      },
-    });
+  const query = [];
+  if (filter?.roomStatus) {
+    query.push({ $match: { roomStatus: new RegExp(filter.roomStatus, "gi") } });
   }
   if (roomType) {
     query.push({ $match: { roomType: new RegExp(roomType, "gi") } });
@@ -153,19 +62,126 @@ const list = async ({ filter, search, page = 1, limit = 10 }) => {
     limit: +limit,
     total: result[0]?.total || 0,
   };
+}; //TODO...
+const getById = async (id) => {
+  const room = await Model.findOne({ roomNo: id });
+  if (!room) throw new Error("room not found");
+  return await Model.findOne({ roomNo: id });
 };
+const createRoom = async (payload) => {
+  const { created_by, updated_by, ...rest } = payload;
+  rest.created_by = updated_by;
+  return await Model.create(rest);
+};
+
+const updateById = async ({ id, payload }) => {
+  const room = await Model.findOne({ roomNo: id });
+  if (!room) throw new Error("room not found");
+  return await Model.findOneAndUpdate({ roomNo: id }, payload, {
+    runValidators: true,
+    new: true,
+  });
+};
+
+const updateStatus = async ({ id, payload }) => {
+  const room = await Model.findOne({ roomNo: id });
+  if (!room) throw new Error("room not found");
+  return Model.findOneAndUpdate({ roomNo: id }, payload, {
+    runValidators: true,
+    new: true,
+  });
+};
+
 const remove = async (id) => {
+  const room = await Model.findOne({ roomNo: id });
+  if (room.roomStatus !== "isEmpty") {
+    throw new Error("Room is not empty. Please empty the room before deletion");
+  }
   return await Model.findOneAndDelete({ roomNo: id });
 };
 
+// const updateFilledStatus = async ({ id, payload }) => {
+//   const room = await Model.findOne({ roomNo: id });
+//   if (!room) throw new Error("room not found");
+//   const { isFilled } = room;
+//   const updatedRoom = await Model.findOneAndUpdate(
+//     { roomNo: id }, //Filter by room number
+//     { isFilled: !isFilled, ...payload }, // Update the status // Update additional fields from the payload
+//     { new: true, runValidators: true }
+//   );
+//   return {
+//     data: { isFilled: updatedRoom?.isFilled },
+//     msg: `Room is ${updatedRoom?.isFilled ? "filled" : "notFilled"} `,
+//   };
+// };
+// const updateBookedStatus = async ({ id, payload }) => {
+//   const room = await Model.findOne({ roomNo: id });
+//   if (!room) throw new Error("room not found");
+//   const { isBooked } = room;
+//   const updatedRoom = await Model.findOneAndUpdate(
+//     { roomNo: id }, //Filter by room number
+//     { isBooked: !isBooked, ...payload }, // Update the status // Update additional fields from the payload
+//     { new: true, runValidators: true }
+//   );
+//   return {
+//     data: { isBooked: updatedRoom?.isBooked },
+//     msg: `Room is ${updatedRoom?.isBooked ? "Booked" : "not Booked"} `,
+//   };
+// };
+// const updateEmptyStatus = async ({ id, payload }) => {
+//   const room = await Model.findOne({ roomNo: id });
+//   if (!room) throw new Error("room not found");
+//   const { isEmpty } = room;
+//   const updatedRoom = await Model.findOneAndUpdate(
+//     { roomNo: id }, //Filter by room number
+//     { isEmpty: !isEmpty, ...payload }, // Update the status // Update additional fields from the payload
+//     { new: true, runValidators: true }
+//   );
+//   return {
+//     data: { isEmpty: updatedRoom?.isEmpty },
+//     msg: `Room is ${updatedRoom?.isEmpty ? "Empty" : "not empty"} `,
+//   };
+// };
+//  const roomStatus = async({id, payload})=>{
+//           const room = await Model.findOne({roomNo:id})
+//           if(!room) throw new Error("room not found")
+//             const{isFilled,isBooked,isEmpty} = room
+//           if(isFilled===true)
+
+//  }
+
+// const checkAllStatus = async ({ id, payload }) => {
+//   const room = await Model.findOne({ roomNo: id });
+//   if (!room) throw new Error("room not found");
+//   const { isFilled, isBooked, isEmpty } = room;
+//   const updatedRoom = await Model.findOneAndUpdate(
+//     { roomNo: id },
+//     { isFilled: isFilled, isBooked: isBooked, isEmpty: isEmpty },
+//     { new: true }
+//   );
+//   return {
+//     data: {
+//       isFilled: updatedRoom?.isFilled,
+//       isBooked: updatedRoom?.isBooked,
+//       isEmpty: updatedRoom?.isEmpty,
+//     },
+//     msg: `Room is${updatedRoom?.isFilled ? "filled" : "not filled"}  ,Room is${
+//       updatedRoom?.isBooked ? "Booked" : "not Booked"
+//     }  ,Room is${updatedRoom?.isEmpty ? "empty" : "not empty"} `,
+//   };
+// };
+
 module.exports = {
+  publicRooms,
   createRoom,
   getById,
+  PublicRoomInfo,
   updateById,
   list,
   remove,
-  updateFilledStatus,
-  updateBookedStatus,
-  updateEmptyStatus,
-  checkAllStatus,
+  updateStatus,
+  // updateFilledStatus,
+  // updateBookedStatus,
+  // updateEmptyStatus,
+  // checkAllStatus,
 };
