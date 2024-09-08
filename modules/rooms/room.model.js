@@ -4,7 +4,7 @@ const { ObjectId } = Schema.Types;
 
 const roomSchema = new Schema(
   {
-    roomNo: { type: Number, required: true, unique: true },
+    roomNo: { type: String, required: true, unique: true },
     roomImage: String,
     created_by: ObjectId,
     updated_by: ObjectId,

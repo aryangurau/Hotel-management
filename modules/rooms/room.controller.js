@@ -6,9 +6,18 @@ const publicRooms = () => {
   return Model.find({ roomStatus: "isEmpty" });
 };
 const PublicRoomInfo = async (id) => {
+  // console.log(`Searching for roomNo: ${id}`); // Log the roomNo (id)
+  // Query for the room with roomNo and roomStatus isEmpty in one go
   const room = await Model.findOne({ roomNo: id, roomStatus: "isEmpty" });
-  if (!room) throw new Error("room may be Filled or booked");
-  return await Model.findOne({ roomNo: id, roomStatus: "isEmpty" });
+  // console.log("Query result:", room); // Log the query result
+  // If no room is found, throw an error
+  if (!room) {
+    throw new Error("Room may be filled or booked ");
+  } else {
+    return room;
+  }
+
+  // If the room exists, return it
 };
 const list = async ({ filter, search, page = 1, limit = 10 }) => {
   let currentPage = +page;
@@ -75,8 +84,10 @@ const createRoom = async (payload) => {
 };
 
 const updateById = async ({ id, payload }) => {
+  // console.log(`searching for roomNo ${id}`)
   const room = await Model.findOne({ roomNo: id });
-  if (!room) throw new Error("room not found");
+
+  if (!room) throw new Error("room not found ");
   return await Model.findOneAndUpdate({ roomNo: id }, payload, {
     runValidators: true,
     new: true,
@@ -84,7 +95,11 @@ const updateById = async ({ id, payload }) => {
 };
 
 const updateStatus = async ({ id, payload }) => {
+  console.log(`searching for roomNo ${id}`)
+
   const room = await Model.findOne({ roomNo: id });
+
+  console.log("room", room)
   if (!room) throw new Error("room not found");
   return Model.findOneAndUpdate({ roomNo: id }, payload, {
     runValidators: true,

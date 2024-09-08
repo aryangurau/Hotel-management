@@ -19,9 +19,15 @@ router.get("/public", async (req, res, next) => {
 });
 router.get("/public/:id", async (req, res, next) => {
   try {
+    // Call the controller function and pass the room id
+    // console.log("Room ID:", req?.params?.id); // Log the incoming room ID
     const result = await roomController.PublicRoomInfo(req?.params?.id);
-    res.json({ data: result, msg: "public Rooms info found successfully" });
+
+    // Respond with the room data if found
+    res.json({ data: result, msg: "Public room info found successfully" });
   } catch (err) {
+    console.error(err); // Log the error
+    // Pass the error to the next middleware
     next(err);
   }
 });
@@ -72,6 +78,7 @@ router.put("/updateById/:id", secureAPI(["admin"]), async (req, res, next) => {
     });
     res.json({ data: result, msg: "room updated by id sucessfully" });
   } catch (err) {
+    // console.log(err)
     next(err);
   }
 });
