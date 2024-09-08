@@ -33,9 +33,28 @@ const secureAPI = (sysRole = []) => {
     }
   };
 };
+
+const checkUser = async (req, res, next) => {
+  try {
+    const me = req.body.updated_by;
+    const user = await userModel.findOne({
+      _id: me,
+    });
+    if (!user) throw new Error("User not found");
+    const isAdmin = user?.roles.includes("admin");
+    if (!isAdmin) {
+      req.body.filter = {
+        created_by: me,
+      };
+    }
+    next();
+  } catch (err) {
+    next(err);
+  }
+};
 // const hash = genHash("aryan");
 // console.log(hash);
 // const verifyHash = compareHash("aryan", hash);
 // console.log(verifyHash);
 
-module.exports = { genHash, compareHash, secureAPI };
+module.exports = { checkUser, genHash, compareHash, secureAPI };
