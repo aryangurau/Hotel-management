@@ -2,7 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
 const morgan = require("morgan");
-
+const cors = require("cors");
 const app = express();
 const PORT = Number(process.env.PORT) || 4646;
 const indexRouter = require("./routes");
@@ -15,7 +15,7 @@ mongoose
   .catch((err) => {
     console.log("database error", err);
   });
-
+app.use(cors());
 app.use(express.json());
 app.use("/resources", express.static("public"));
 app.use(morgan("tiny"));
