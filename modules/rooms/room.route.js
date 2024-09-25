@@ -1,159 +1,107 @@
-const router = require("express").Router();
-const roomController = require("./room.controller");
-const { secureAPI } = require("../../utils/secure");
-// const {
-//   statusValidation,
-//   priceValidation,
-//   guestValidation,
-// } = require("./room.validation");
-const { roomValidation, statusValidation } = require("./room.validation");
 
-//Public
+const router = require("express").Router();
+const { secureAPI } = require("../../utils/secure");
+const Controller = require("./room.controller");
+
+// Public
 router.get("/public", async (req, res, next) => {
   try {
-    const result = await roomController.publicRooms();
-    res.json({ data: result, msg: "Available rooms listed" });
-  } catch (err) {
-    next(err);
+    const result = await Controller.publicRooms();
+    res.json({
+      data: result,
+      msg: "All available rooms are shown successfully",
+    });
+  } catch (e) {
+    next(e);
   }
 });
-router.get("/public/:id", async (req, res, next) => {
+
+router.get("/public/:number", async (req, res, next) => {
   try {
-    // Call the controller function and pass the room id
-    // console.log("Room ID:", req?.params?.id); // Log the incoming room ID
-    const result = await roomController.PublicRoomInfo(req?.params?.id);
-
-    // Respond with the room data if found
-    res.json({ data: result, msg: "Public room info found successfully" });
-  } catch (err) {
-    console.error(err); // Log the error
-    // Pass the error to the next middleware
-    next(err);
+    const result = await Controller.publicRoomInfo(req.params.number);
+    res.json({
+      data: result,
+      msg: "Room Info is shown successfully",
+    });
+  } catch (e) {
+    next(e);
   }
 });
 
-//Admin
+// Admin
 router.get("/", secureAPI(["admin"]), async (req, res, next) => {
   try {
-    const { roomType, page, limit, roomStatus } = req.query;
-
-    const filter = { roomStatus };
-    const search = { roomType };
-
-    const result = await roomController.list({ filter, search, page, limit });
-    res.json({ data: result, msg: "Room list generated successfully" });
-  } catch (err) {
-    next(err);
+    const { name, page, limit, status } = req.query;
+    const filter = { status };
+    const search = { name };
+    const result = await Controller.list({ filter, search, page, limit });
+    res.json({
+      data: result,
+      msg: "Rooms list are shown successfully",
+    });
+  } catch (e) {
+    next(e);
   }
-}); //TODO........
+});
 
 router.get("/:id", secureAPI(["admin"]), async (req, res, next) => {
   try {
-    const result = await roomController.getById(req?.params?.id);
-    res.json({ data: result, msg: "room found by Id successfully" });
-  } catch (err) {
-    next(err);
-  }
-});
-
-router.post(
-  "/createRoom",
-  roomValidation,
-  secureAPI(["admin"]),
-  async (req, res, next) => {
-    try {
-      const result = await roomController.createRoom(req.body);
-      res.json({ data: result, msg: "room created successfully" });
-    } catch (err) {
-      next(err);
-    }
-  }
-);
-
-router.put("/updateById/:id", secureAPI(["admin"]), async (req, res, next) => {
-  try {
-    const result = await roomController.updateById({
-      id: req?.params?.id,
-      payload: req.body,
+    const result = await Controller.publicRooms(req.params.id);
+    res.json({
+      data: result,
+      msg: "All available rooms are shown successfully",
     });
-    res.json({ data: result, msg: "room updated by id sucessfully" });
-  } catch (err) {
-    // console.log(err)
-    next(err);
+  } catch (e) {
+    next(e);
   }
 });
 
-router.patch(
-  "/updateStatus/:id",
-  statusValidation,
-  secureAPI(["admin"]),
-  async (req, res, next) => {
-    try {
-      const result = await roomController.updateStatus({
-        id: req?.params?.id,
-        payload: req.body,
-      });
-      res.json({
-        data: result,
-        msg: "status of the room updated successfullly",
-      });
-    } catch (err) {
-      next(err);
-    }
-  }
-);
-
-router.delete("/remove/:id", secureAPI(["admin"]), async (req, res, next) => {
+router.post("/", secureAPI(["admin"]), async (req, res, next) => {
   try {
-    const result = await roomController.remove(req?.params?.id);
-    res.json({ data: result, msg: "room deleted sucessfully" });
-  } catch (err) {
-    next(err);
+    const result = await Controller.create(req.body);
+    res.json({
+      data: result,
+      msg: "New room is added successfully",
+    });
+  } catch (e) {
+    next(e);
   }
 });
 
-// router.patch("/updateFilledStatus/:id", async (req, res, next) => {
-//   try {
-//     const result = await roomController.updateFilledStatus({
-//       id: req?.params?.id,
-//       payload: req.body,
-//     });
-//     res.json({ data: result, msg: "status of the room updated successfullly" });
-//   } catch (err) {
-//     next(err);
-//   }
-// });
+router.put("/:id", secureAPI(["admin"]), async (req, res, next) => {
+  try {
+    const result = await Controller.updateById(req.params.id, req.body);
+    res.json({
+      data: result,
+      msg: "Room updated successfully",
+    });
+  } catch (e) {
+    next(e);
+  }
+});
 
-// router.patch("/updateBookedStatus/:id", async (req, res, next) => {
-//   try {
-//     const result = await roomController.updateBookedStatus({
-//       id: req?.params?.id,
-//       payload: req.body,
-//     });
-//     res.json({ data: result, msg: "status of the room updated successfullly" });
-//   } catch (err) {
-//     next(err);
-//   }
-// });
-// router.patch("/updateEmptyStatus/:id", async (req, res, next) => {
-//   try {
-//     const result = await roomController.updateEmptyStatus({
-//       id: req?.params?.id,
-//       payload: req.body,
-//     });
-//     res.json({ data: result, msg: "status of the room updated successfullly" });
-//   } catch (err) {
-//     next(err);
-//   }
-// });
+router.patch("/:id", secureAPI(["admin"]), async (req, res, next) => {
+  try {
+    const result = await Controller.updateStatus(req.params.id, req.body);
+    res.json({
+      data: result,
+      msg: "Room status updated successfully",
+    });
+  } catch (e) {
+    next(e);
+  }
+});
 
-// router.patch("/checkAllStatus/:id", async (req, res, next) => {
-//   try {
-//     const result = await roomController.checkAllStatus({ id: req?.params?.id });
-//     res.json(result);
-//   } catch (err) {
-//     next(err);
-//   }
-// });
+router.delete("/:number", secureAPI(["admin"]), async (req, res, next) => {
+  try {
+    const result = await Controller.remove(req.params.number);
+    res.json({
+      data: result,
+      msg: "Room deleted successfully",
+    });
+  } catch (e) {
+    next(e);
+  }
+});
 
 module.exports = router;

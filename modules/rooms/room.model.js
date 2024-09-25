@@ -1,39 +1,28 @@
-const { boolean } = require("joi");
 const { Schema, model } = require("mongoose");
 const { ObjectId } = Schema.Types;
-
 const roomSchema = new Schema(
   {
-    roomNo: { type: String, required: true, unique: true },
-    roomImage: String,
-    created_by: ObjectId,
-    updated_by: ObjectId,
-    roomType: {
+    name: { type: String, required: true, unique: true },
+    created_by: { type: ObjectId, ref: "User", required: true },
+    type: {
       type: String,
       enum: ["single", "double", "suite"],
-      default: "single",
+      default: "double",
     },
-    roomPrice: {
+    price: {
       type: Number,
-      required: true,
-      // min: [750, "Minimum room price is 750"],
-      // max: [10000, "Minimum room price is 10000"], //TODO......joi validation
+      min: [750, "Minimum room price is 750"],
+      max: [10000, "Minimum room price is 750"],
     },
-    // isFilled: { type: Boolean, default: false },
-    // isBooked: { type: Boolean, default: false },
-    // isEmpty: { type: Boolean, default: false },
-
-    roomStatus: {
+    status: {
       type: String,
-      enum: ["isFilled", "isBooked", "isEmpty"],
-      default: "isEmpty",
+      enum: ["empty", "booked", "occupied"],
+      default: "empty",
     },
-
     totalGuests: {
       type: Number,
-      required: true,
-      // min: [1, "Minimum accomodation is 1"],
-      // max: [5, "Maximum accomodation is 5"], //TODO......joi validation
+      min: [1, "Minimum accomodation is 1"],
+      max: [5, "Maximum accomodation is 5"],
     },
   },
   {
@@ -41,5 +30,4 @@ const roomSchema = new Schema(
   }
 );
 
-const roomModel = new model("Room", roomSchema);
-module.exports = roomModel;
+module.exports = new model("Room", roomSchema);
