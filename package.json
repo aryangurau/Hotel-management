@@ -4,7 +4,9 @@
   "description": "batch-10-be",
   "main": "index.js",
   "scripts": {
-    "start": "nodemon ."
+    "dev": "nodemon .",
+    "start": "node .",
+    "seed": "node seed"
   },
   "keywords": [],
   "author": "",
