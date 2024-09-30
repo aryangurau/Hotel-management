@@ -20,6 +20,7 @@ const list = async ({ filter, search, page = 1, limit = 10 }) => {
     query.push({
       $match: {
         isBlocked: filter?.status,
+        status: filter?.status,
       },
     });
   }
