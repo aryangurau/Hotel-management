@@ -1,4 +1,3 @@
-
 const Model = require("./room.model");
 
 const create = (payload) => {
@@ -19,7 +18,6 @@ const list = async ({ filter, search, page = 1, limit = 10 }) => {
   if (filter?.status) {
     query.push({
       $match: {
-        isBlocked: filter?.status,
         status: filter?.status,
       },
     });
