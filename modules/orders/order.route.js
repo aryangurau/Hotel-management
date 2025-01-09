@@ -5,12 +5,40 @@ const OrderController = require("./order.controller");
 // Get all orders (admin only)
 router.get("/", secureAPI(["admin"]), async (req, res, next) => {
   try {
+    console.log('GET / - Admin orders request:', {
+      query: req.query,
+      user: req.user
+    });
+
     const { orderNo, page, limit, status } = req.query;
-    const filter = { status };
-    const search = { orderNo };
+    const filter = {};
+    if (status) filter.status = status;
+    
+    const search = {};
+    if (orderNo) search.orderNo = orderNo;
+
+    console.log('Fetching orders with:', { filter, search, page, limit });
     const result = await OrderController.list({ filter, search, page, limit });
-    res.json({ data: result.data, msg: "Orders fetched successfully" });
+    
+    // Ensure we have a valid response structure
+    const responseData = {
+      data: result?.data || [],
+      currentPage: result?.currentPage || 1,
+      totalPages: result?.totalPages || 0,
+      total: result?.total || 0,
+      msg: "Orders fetched successfully"
+    };
+
+    console.log('Sending response:', {
+      ordersCount: responseData.data.length,
+      currentPage: responseData.currentPage,
+      totalPages: responseData.totalPages,
+      total: responseData.total
+    });
+
+    res.json(responseData);
   } catch (err) {
+    console.error('Error fetching admin orders:', err);
     next(err);
   }
 });

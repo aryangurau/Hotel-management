@@ -92,11 +92,11 @@ const list = async ({ filter, search, page = 1, limit = 10 }) => {
 
     console.log('Final match conditions:', JSON.stringify(matchConditions, null, 2));
 
-    // First, try to find any matching orders
-    const sampleOrder = await Model.findOne(matchConditions);
-    console.log('Sample order found:', sampleOrder ? JSON.stringify(sampleOrder, null, 2) : 'No');
+    // Get total count
+    const total = await Model.countDocuments(matchConditions);
+    console.log('Total matching documents:', total);
 
-    if (!sampleOrder) {
+    if (total === 0) {
       console.log('No orders found with these conditions');
       return {
         data: [],
@@ -105,10 +105,6 @@ const list = async ({ filter, search, page = 1, limit = 10 }) => {
         total: 0
       };
     }
-
-    // Get total count
-    const total = await Model.countDocuments(matchConditions);
-    console.log('Total matching documents:', total);
 
     const pipeline = [
       {
@@ -131,6 +127,24 @@ const list = async ({ filter, search, page = 1, limit = 10 }) => {
         }
       },
       {
+        $addFields: {
+          roomDetails: {
+            $cond: {
+              if: { $eq: [{ $size: "$roomDetails" }, 0] },
+              then: [{}],
+              else: "$roomDetails"
+            }
+          },
+          hotelDetails: {
+            $cond: {
+              if: { $eq: [{ $size: "$hotelDetails" }, 0] },
+              then: [{}],
+              else: "$hotelDetails"
+            }
+          }
+        }
+      },
+      {
         $unwind: {
           path: "$roomDetails",
           preserveNullAndEmptyArrays: true
@@ -144,7 +158,11 @@ const list = async ({ filter, search, page = 1, limit = 10 }) => {
       },
       {
         $addFields: {
-          orderNo: { $ifNull: ["$orderNo", "$number"] } // Use number if orderNo doesn't exist
+          orderNo: { $ifNull: ["$orderNo", "$number"] }, // Use number if orderNo doesn't exist
+          hotelName: { $ifNull: ["$hotelDetails.name", "N/A"] },
+          roomNumber: { $ifNull: ["$roomDetails.roomNumber", "N/A"] },
+          roomType: { $ifNull: ["$roomDetails.roomType", "N/A"] },
+          totalGuests: { $ifNull: ["$roomDetails.totalGuests", 0] }
         }
       },
       {
@@ -158,11 +176,11 @@ const list = async ({ filter, search, page = 1, limit = 10 }) => {
           departureDate: 1,
           updated_by: 1,
           created_at: 1,
-          hotelName: "$hotelDetails.name",
-          roomNumber: "$roomDetails.roomNumber",
-          roomType: "$roomDetails.roomType",
+          hotelName: 1,
+          roomNumber: 1,
+          roomType: 1,
           paymentMethod: 1,
-          totalGuests: "$roomDetails.totalGuests"
+          totalGuests: 1
         }
       },
       {
