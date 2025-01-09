@@ -31,9 +31,20 @@ router.get("/", secureAPI(["admin"]), async (req, res, next) => {
 
 router.post("/login", validate, async (req, res, next) => {
   try {
+    console.log('Login attempt with:', {
+      body: req.body,
+      headers: req.headers
+    });
+    
+    if (!req.body || !req.body.email || !req.body.password) {
+      throw new Error('Email and password are required');
+    }
+    
     const result = await controller.login(req?.body);
+    console.log('Login successful for:', req.body.email);
     res.json({ data: result, msg: "user logged in successfully" });
   } catch (err) {
+    console.error('Login failed:', err);
     next(err);
   }
 });

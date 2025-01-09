@@ -76,20 +76,40 @@ const verifyEmailToken = async (payload) => {
 };
 
 const login = async (payload) => {
-  const { email, password } = payload;
-  //user find using email + is blocked ? isActive
-  const user = await Model.findOne({ email, isActive: true, isBlocked: false });
-  if (!user) throw new Error("Try using correct email");
-  //compare password withh db stored pw
-  const isValidPw = compareHash(password, user?.password);
-  if (!isValidPw) throw new Error("Username or password is incorrect");
-  //generate token and return token
-  const data = {
-    name: user?.name,
-    email: user?.email,
-    roles: user?.roles,
-  };
-  return genToken(data);
+  try {
+    const { email, password } = payload;
+    
+    // Find user without conditions first
+    const userExists = await Model.findOne({ email });
+    
+    if (!userExists) {
+      throw new Error("Try using correct email");
+    }
+    
+    if (!userExists.isActive) {
+      throw new Error("Account is not activated");
+    }
+    
+    if (userExists.isBlocked) {
+      throw new Error("Account is blocked");
+    }
+    
+    const isValidPw = compareHash(password, userExists.password);
+    if (!isValidPw) {
+      throw new Error("Username or password is incorrect");
+    }
+    
+    const data = {
+      _id: userExists._id,
+      name: userExists.name,
+      email: userExists.email,
+      roles: userExists.roles,
+    };
+    
+    return genToken(data);
+  } catch (error) {
+    throw error;
+  }
 };
 
 const genForgetPasswordToken = async ({ email }) => {
