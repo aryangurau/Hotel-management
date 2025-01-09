@@ -170,6 +170,29 @@ router.put(
   }
 );
 
+// Update order status (admin only)
+router.patch('/:orderId/status', secureAPI(["admin"]), async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { status } = req.body;
+    const updatedBy = req.user.email;
+
+    const result = await OrderController.updateOrderStatus({
+      orderId,
+      status,
+      updatedBy
+    });
+
+    res.json(result);
+  } catch (error) {
+    console.error('Route error - update order status:', error);
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
 // Delete order (admin only)
 router.delete("/:number", secureAPI(["admin"]), async (req, res, next) => {
   try {

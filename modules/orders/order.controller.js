@@ -187,21 +187,81 @@ const isAdmin = async (userId) => {
   return user?.roles?.includes('admin') || false;
 };
 
-const updateOrderStatus = async (orderNo, updatedBy) => {
+const updateOrderStatus = async ({ orderId, status, updatedBy }) => {
   try {
-    const order = await Model.findOne({ number: orderNo });
-    if (!order) throw new Error('Order not found');
+    console.log('Updating order status:', { orderId, status, updatedBy });
 
-    // Only allow admin or the user who created the order to update status
-    const admin = await isAdmin(updatedBy);
-    if (!admin && order.created_by.toString() !== updatedBy) {
-      throw new Error('Not authorized to update this order');
+    // First try to update booking if it exists
+    const booking = await require('../bookings/booking.model').findById(orderId);
+    if (booking) {
+      // Convert status to uppercase for bookings
+      const bookingStatus = status.toUpperCase();
+      if (!['PENDING', 'CONFIRMED', 'CANCELLED'].includes(bookingStatus)) {
+        throw new Error('Invalid booking status');
+      }
+
+      const updatedBooking = await require('../bookings/booking.model')
+        .findByIdAndUpdate(
+          orderId,
+          { 
+            status: bookingStatus,
+            updatedAt: new Date()
+          },
+          { new: true }
+        )
+        .populate('roomId', 'name type price status totalGuests')
+        .populate('userId', 'name email phone');
+
+      if (!updatedBooking) {
+        throw new Error('Booking not found');
+      }
+
+      console.log('Updated booking:', updatedBooking);
+      return {
+        success: true,
+        message: 'Booking status updated successfully'
+      };
     }
 
-    order.status = order.status === 'confirmed' ? 'cancelled' : 'confirmed';
-    await order.save();
-    return order;
+    // If not a booking, try to update order
+    const order = await Model.findById(orderId);
+    if (!order) {
+      throw new Error('Order not found');
+    }
+
+    // Validate status for orders
+    if (!['unpaid', 'confirmed', 'cancelled', 'completed'].includes(status.toLowerCase())) {
+      throw new Error('Invalid order status');
+    }
+
+    const updatedOrder = await Model.findByIdAndUpdate(
+      orderId,
+      { 
+        status: status.toLowerCase(),
+        updated_by: updatedBy,
+        'paymentDetails.status': status.toLowerCase() === 'confirmed' ? 'paid' : 'pending',
+        'paymentDetails.paidAt': status.toLowerCase() === 'confirmed' ? new Date() : null
+      },
+      { new: true }
+    ).populate([
+      {
+        path: 'room',
+        select: 'name type price status totalGuests'
+      },
+      {
+        path: 'created_by',
+        select: 'name email phone'
+      }
+    ]);
+
+    console.log('Updated order:', updatedOrder);
+    return {
+      success: true,
+      message: 'Order status updated successfully'
+    };
+
   } catch (error) {
+    console.error('Error updating order status:', error);
     throw error;
   }
 };
