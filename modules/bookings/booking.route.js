@@ -1,19 +1,23 @@
-const router = require('express').Router();
+const express = require('express');
+const router = express.Router();
 const { isUser } = require('../../middlewares/auth.middleware');
-const { createBooking, getBookings } = require('./booking.controller');
+const {
+    createBooking,
+    getBookings,
+    getBookingById,
+    updateBookingStatus
+} = require('./booking.controller');
 
-// Debug middleware
-const debugMiddleware = (req, res, next) => {
-    console.log('Booking Route Debug:');
-    console.log('Method:', req.method);
-    console.log('Path:', req.path);
-    console.log('Headers:', JSON.stringify(req.headers, null, 2));
-    console.log('User:', req.user?._id);
-    next();
-};
+// Create a new booking
+router.post('/', isUser, createBooking);
 
-// Routes with debug middleware
-router.post('/', isUser, debugMiddleware, createBooking);
-router.get('/', isUser, debugMiddleware, getBookings);
+// Get all bookings for the authenticated user
+router.get('/user/:userId', isUser, getBookings);
+
+// Get a specific booking by ID
+router.get('/:id', isUser, getBookingById);
+
+// Update booking status
+router.patch('/:id/status', isUser, updateBookingStatus);
 
 module.exports = router;
