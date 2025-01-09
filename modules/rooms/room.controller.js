@@ -11,64 +11,79 @@ const publicRooms = () => {
 };
 
 const list = async ({ filter, search, page = 1, limit = 10 }) => {
-  let currentPage = +page;
-  currentPage = currentPage < 1 ? 1 : currentPage;
-  const { name } = search;
-  const query = [];
-  if (filter?.status) {
-    query.push({
-      $match: {
-        status: filter?.status,
-      },
-    });
-  }
+  try {
+    console.log('Room list input:', { filter, search, page, limit });
+    let currentPage = +page;
+    currentPage = currentPage < 1 ? 1 : currentPage;
+    const { name } = search;
+    const query = [];
+    
+    if (filter?.status) {
+      console.log('Adding status filter:', filter.status);
+      query.push({
+        $match: {
+          status: filter?.status,
+        },
+      });
+    }
 
-  if (name) {
-    query.push({
-      $match: {
-        name: new RegExp(name, "gi"),
-      },
-    });
-  }
+    if (name) {
+      console.log('Adding name search:', name);
+      query.push({
+        $match: {
+          name: new RegExp(name, "gi"),
+        },
+      });
+    }
 
-  query.push(
-    {
-      $facet: {
-        metadata: [
-          {
-            $count: "total",
-          },
-        ],
-        data: [
-          {
-            $skip: (currentPage - 1) * +limit,
-          },
-          {
-            $limit: +limit,
-          },
-        ],
-      },
-    },
-    {
-      $addFields: {
-        total: {
-          $arrayElemAt: ["$metadata.total", 0],
+    query.push(
+      {
+        $facet: {
+          metadata: [
+            {
+              $count: "total",
+            },
+          ],
+          data: [
+            {
+              $skip: (currentPage - 1) * +limit,
+            },
+            {
+              $limit: +limit,
+            },
+          ],
         },
       },
-    },
-    {
-      $project: {
-        metadata: 0,
+      {
+        $addFields: {
+          total: {
+            $arrayElemAt: ["$metadata.total", 0],
+          },
+        },
       },
-    }
-  );
-  const result = await Model.aggregate(query);
-  return {
-    data: result[0]?.data,
-    page: +currentPage,
-    limit: +limit,
-    total: result[0].total || 0,
-  };
+      {
+        $project: {
+          metadata: 0,
+        },
+      }
+    );
+    
+    console.log('Final aggregation query:', JSON.stringify(query, null, 2));
+    const result = await Model.aggregate(query);
+    console.log('Aggregation result:', result);
+    
+    const response = {
+      data: result[0]?.data || [],
+      page: +currentPage,
+      limit: +limit,
+      total: result[0]?.total || 0,
+    };
+    console.log('Final response:', response);
+    return response;
+  } catch (error) {
+    console.error('Error in room list:', error);
+    throw error;
+  }
 };
 
 const getById = (id) => {
@@ -88,13 +103,18 @@ const updateStatus = (id, payload) => {
 };
 
 const remove = async (number) => {
-  const room = await Model.findOne({ name: new RegExp(number, "gi") });
-  if (room.status !== "empty") {
-    throw new Error(
-      "Room is not empty at the moment. Please empty the room before deleting"
-    );
+  try {
+    const room = await Model.findOne({ name: new RegExp(number, "gi") });
+    if (room.status !== "empty") {
+      throw new Error(
+        "Room is not empty at the moment. Please empty the room before deleting"
+      );
+    }
+    return Model.deleteOne({ name: new RegExp(number, "gi") });
+  } catch (error) {
+    console.error('Error in room removal:', error);
+    throw error;
   }
-  return Model.deleteOne({ name: new RegExp(number, "gi") });
 };
 
 module.exports = {

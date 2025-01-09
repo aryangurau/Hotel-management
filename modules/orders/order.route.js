@@ -3,14 +3,15 @@ const { checkUser, secureAPI } = require("../../utils/secure");
 const OrderController = require("./order.controller");
 
 // Get all orders (admin only)
-router.get("/", secureAPI(["admin"]), async (req, res, next) => {
+router.get("/list", secureAPI(["admin"]), async (req, res, next) => {
   try {
-    console.log('GET / - Admin orders request:', {
+    console.log('GET /list - Admin orders request:', {
       query: req.query,
       user: req.user
     });
 
-    const { orderNo, page, limit, status } = req.query;
+    const { page = 1, limit = 10, status, orderNo } = req.query;
+    
     const filter = {};
     if (status) filter.status = status;
     
@@ -18,28 +19,28 @@ router.get("/", secureAPI(["admin"]), async (req, res, next) => {
     if (orderNo) search.orderNo = orderNo;
 
     console.log('Fetching orders with:', { filter, search, page, limit });
-    const result = await OrderController.list({ filter, search, page, limit });
+    const result = await OrderController.list({ 
+      filter, 
+      search, 
+      page: parseInt(page), 
+      limit: parseInt(limit) 
+    });
     
-    // Ensure we have a valid response structure
-    const responseData = {
-      data: result?.data || [],
-      currentPage: result?.currentPage || 1,
-      totalPages: result?.totalPages || 0,
-      total: result?.total || 0,
-      msg: "Orders fetched successfully"
-    };
-
-    console.log('Sending response:', {
-      ordersCount: responseData.data.length,
-      currentPage: responseData.currentPage,
-      totalPages: responseData.totalPages,
-      total: responseData.total
+    console.log('Orders fetched:', {
+      total: result.total,
+      currentPage: result.currentPage,
+      totalPages: result.totalPages,
+      count: result.data.length
     });
 
-    res.json(responseData);
-  } catch (err) {
-    console.error('Error fetching admin orders:', err);
-    next(err);
+    res.json({
+      data: result,
+      msg: "Orders fetched successfully"
+    });
+
+  } catch (e) {
+    console.error('Error in GET /list:', e.stack);
+    next(e);
   }
 });
 

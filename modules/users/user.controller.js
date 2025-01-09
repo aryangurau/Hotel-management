@@ -230,74 +230,87 @@ const updateById = async ({ id, payload }) => {
 };
 
 const list = async ({ filter, search, page = 1, limit = 10 }) => {
-  //multiple filter (role, status)
-  //search
-  //sorting
-  //pagination
-  // const { isBlocked, isActive } = filter;
-  let currentPage = +page;
-  currentPage = currentPage < 1 ? 1 : currentPage;
-  const { name } = search;
+  try {
+    console.log('User list input:', { filter, search, page, limit });
+    let currentPage = +page;
+    currentPage = currentPage < 1 ? 1 : currentPage;
+    const { name } = search;
 
-  const query = [];
+    const query = [];
 
-  if (filter?.isActive === "yes" || filter?.isActive === "no") {
-    query.push({
-      $match: {
-        isActive: filter?.isActive === "yes" ? true : false,
-      },
-    });
-  }
-  if (filter?.isBlocked == "yes" || filter?.isBlocked === "no") {
-    query.push({
-      $match: {
-        isBlocked: filter?.isBlocked === "yes" ? true : false,
-      },
-    });
-  }
-  if (name) {
-    query.push({ $match: { name: new RegExp(name, "gi") } });
-  }
-  query.push(
-    {
-      $facet: {
-        metadata: [
-          {
-            $count: "total",
-          },
-        ],
-        data: [
-          {
-            $skip: (currentPage - 1) * +limit,
-          },
-          {
-            $limit: +limit,
-          },
-        ],
-      },
-    },
-    {
-      $addFields: {
-        total: {
-          $arrayElemAt: ["$metadata.total", 0],
+    if (filter?.isActive === "yes" || filter?.isActive === "no") {
+      console.log('Adding isActive filter:', filter.isActive);
+      query.push({
+        $match: {
+          isActive: filter?.isActive === "yes" ? true : false,
+        },
+      });
+    }
+    if (filter?.isBlocked == "yes" || filter?.isBlocked === "no") {
+      console.log('Adding isBlocked filter:', filter.isBlocked);
+      query.push({
+        $match: {
+          isBlocked: filter?.isBlocked === "yes" ? true : false,
+        },
+      });
+    }
+    if (name) {
+      console.log('Adding name search:', name);
+      query.push({ $match: { name: new RegExp(name, "gi") } });
+    }
+    
+    query.push(
+      {
+        $facet: {
+          metadata: [
+            {
+              $count: "total",
+            },
+          ],
+          data: [
+            {
+              $skip: (currentPage - 1) * +limit,
+            },
+            {
+              $limit: +limit,
+            },
+          ],
         },
       },
-    },
-    {
-      $project: {
-        metadata: 0,
+      {
+        $addFields: {
+          total: {
+            $arrayElemAt: ["$metadata.total", 0],
+          },
+        },
       },
-    }
-  );
+      {
+        $project: {
+          metadata: 0,
+          password: 0,
+          token: 0
+        },
+      }
+    );
 
-  const result = await Model.aggregate(query);
-  return {
-    data: result[0]?.data,
-    page: +currentPage,
-    limit: +limit,
-    total: result[0]?.total || 0,
-  };
+    console.log('Final aggregation query:', JSON.stringify(query, null, 2));
+    const result = await Model.aggregate(query);
+    console.log('Aggregation result:', result);
+
+    const response = {
+      data: result[0]?.data || [],
+      page: +currentPage,
+      limit: +limit,
+      total: result[0]?.total || 0,
+    };
+    console.log('Final response:', response);
+    return response;
+  } catch (error) {
+    console.error('Error in user list:', error);
+    throw error;
+  }
 };
+
 //advance data operation
 
 /*

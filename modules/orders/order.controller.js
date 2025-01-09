@@ -67,37 +67,33 @@ const getByOrderNumber = (orderNo, filter) => {
   return Model.findOne({ number: orderNo, ...filter });
 };
 
-const list = async ({ filter, search, page = 1, limit = 10 }) => {
+const list = async ({ filter = {}, search = {}, page = 1, limit = 10 }) => {
   try {
-    console.log('List orders with filter:', JSON.stringify(filter, null, 2));
-    let currentPage = +page;
-    currentPage = currentPage < 1 ? 1 : currentPage;
-    const skip = (currentPage - 1) * limit;
+    console.log('List orders with:', { filter, search, page, limit });
+    
+    const currentPage = Math.max(1, parseInt(page));
+    const skip = (currentPage - 1) * parseInt(limit);
 
     // Build match conditions
     const matchConditions = {};
+    
+    // Handle status filter
     if (filter?.status) {
       matchConditions.status = filter.status;
     }
-    if (filter?.updated_by) {
-      matchConditions.updated_by = filter.updated_by;
-    }
+    
+    // Handle order number search
     if (search?.orderNo) {
       matchConditions.orderNo = new RegExp(search.orderNo, "i");
     }
-    // Also check for legacy 'number' field
-    if (search?.number) {
-      matchConditions.number = new RegExp(search.number, "i");
-    }
 
-    console.log('Final match conditions:', JSON.stringify(matchConditions, null, 2));
+    console.log('Match conditions:', matchConditions);
 
     // Get total count
     const total = await Model.countDocuments(matchConditions);
-    console.log('Total matching documents:', total);
-
+    
     if (total === 0) {
-      console.log('No orders found with these conditions');
+      console.log('No orders found');
       return {
         data: [],
         currentPage: 1,
@@ -106,119 +102,44 @@ const list = async ({ filter, search, page = 1, limit = 10 }) => {
       };
     }
 
-    const pipeline = [
-      {
-        $match: matchConditions
-      },
-      {
-        $lookup: {
-          from: "rooms",
-          localField: "room",
-          foreignField: "_id",
-          as: "roomDetails"
-        }
-      },
-      {
-        $lookup: {
-          from: "hotels",
-          localField: "roomDetails.hotel",
-          foreignField: "_id",
-          as: "hotelDetails"
-        }
-      },
-      {
-        $addFields: {
-          roomDetails: {
-            $cond: {
-              if: { $eq: [{ $size: "$roomDetails" }, 0] },
-              then: [{}],
-              else: "$roomDetails"
-            }
-          },
-          hotelDetails: {
-            $cond: {
-              if: { $eq: [{ $size: "$hotelDetails" }, 0] },
-              then: [{}],
-              else: "$hotelDetails"
-            }
-          }
-        }
-      },
-      {
-        $unwind: {
-          path: "$roomDetails",
-          preserveNullAndEmptyArrays: true
-        }
-      },
-      {
-        $unwind: {
-          path: "$hotelDetails",
-          preserveNullAndEmptyArrays: true
-        }
-      },
-      {
-        $addFields: {
-          orderNo: { $ifNull: ["$orderNo", "$number"] }, // Use number if orderNo doesn't exist
-          hotelName: { $ifNull: ["$hotelDetails.name", "N/A"] },
-          roomNumber: { $ifNull: ["$roomDetails.roomNumber", "N/A"] },
-          roomType: { $ifNull: ["$roomDetails.roomType", "N/A"] },
-          totalGuests: { $ifNull: ["$roomDetails.totalGuests", 0] }
-        }
-      },
-      {
-        $project: {
-          _id: 1,
-          orderNo: 1,
-          receiver: 1,
-          amount: 1,
-          status: 1,
-          arrivalDate: 1,
-          departureDate: 1,
-          updated_by: 1,
-          created_at: 1,
-          hotelName: 1,
-          roomNumber: 1,
-          roomType: 1,
-          paymentMethod: 1,
-          totalGuests: 1
-        }
-      },
-      {
-        $sort: { created_at: -1 }
-      },
-      {
-        $skip: skip
-      },
-      {
-        $limit: +limit
-      }
-    ];
+    // Fetch orders with pagination and populate references
+    const orders = await Model.find(matchConditions)
+      .populate({
+        path: 'room',
+        select: 'name type price status totalGuests',
+        model: 'Room'
+      })
+      .populate({
+        path: 'created_by',
+        select: 'name email',
+        model: 'User'
+      })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit))
+      .lean();
 
-    console.log('Running aggregation pipeline');
-    const orders = await Model.aggregate(pipeline);
-    console.log('Found orders after aggregation:', orders.length);
-    console.log('Sample order from aggregation:', orders[0] ? JSON.stringify(orders[0], null, 2) : 'None');
+    console.log('Found orders:', orders.length);
 
-    const totalPages = Math.ceil(total / limit);
-
-    const result = {
+    const response = {
       data: orders,
       currentPage,
-      totalPages,
+      totalPages: Math.ceil(total / parseInt(limit)),
       total
     };
 
-    console.log('Returning result:', JSON.stringify({
-      ordersCount: orders.length,
-      currentPage,
-      totalPages,
-      total
-    }, null, 2));
+    console.log('Sending response:', {
+      currentPage: response.currentPage,
+      totalPages: response.totalPages,
+      total: response.total,
+      orderCount: response.data.length
+    });
 
-    return result;
+    return response;
+
   } catch (error) {
-    console.error('Error in list orders:', error);
-    throw new Error('Failed to fetch orders: ' + error.message);
+    console.error('Error in list orders:', error.stack);
+    throw error;
   }
 };
 
