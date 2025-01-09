@@ -1,7 +1,7 @@
 const router = require("express").Router();
 const multer = require("multer");
 const controller = require("./user.controller");
-const { validate, forgetPasswordvalidation } = require("./user.validation");
+const { validate, forgetPasswordvalidation, validateProfile } = require("./user.validation");
 const { secureAPI } = require("../../utils/secure");
 
 const storage = multer.diskStorage({
@@ -142,11 +142,30 @@ router.get("/:id", secureAPI(["admin"]), async (req, res, next) => {
   }
 });
 
-router.put("/profile", secureAPI(["admin", "user"]), async (req, res, next) => {
+// Get user profile
+router.get("/profile", secureAPI(["admin", "user"]), async (req, res, next) => {
   try {
-    const result = await controller.updateProfile(req.body);
+    console.log('Get profile request for user:', req.user._id);
+    const result = await controller.getProfile(req.user._id);
+    res.json({ data: result, msg: "profile fetched successfully" });
+  } catch (err) {
+    console.error('Error in get profile route:', err);
+    next(err);
+  }
+});
+
+// Update user profile
+router.put("/profile", secureAPI(["admin", "user"]), validateProfile, async (req, res, next) => {
+  try {
+    console.log('Update profile request for user:', req.user._id);
+    const payload = {
+      ...req.body,
+      updated_by: req.user._id
+    };
+    const result = await controller.updateProfile(payload);
     res.json({ data: result, msg: "profile updated successfully" });
   } catch (err) {
+    console.error('Error in update profile route:', err);
     next(err);
   }
 });

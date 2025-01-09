@@ -16,10 +16,15 @@ const secureAPI = (sysRole = []) => {
       console.log('Secure API middleware - roles:', sysRole);
       console.log('Request headers:', req.headers);
 
-      const { access_token } = req.headers;
-      if (!access_token) throw new Error("access token not found");
+      // Get token from Authorization header
+      const authHeader = req.headers.authorization;
+      if (!authHeader) throw new Error("Authorization header not found");
 
-      const decoded = verifyToken(access_token);
+      // Extract token from "Bearer <token>"
+      const token = authHeader.split(' ')[1];
+      if (!token) throw new Error("Bearer token not found");
+
+      const decoded = verifyToken(token);
       console.log('Decoded token:', decoded);
 
       const { email } = decoded;
@@ -37,6 +42,9 @@ const secureAPI = (sysRole = []) => {
 
       if (!user) throw new Error("user not found");
 
+      // Add user to request object for later use
+      req.user = user;
+
       // Convert roles to lowercase for case-insensitive comparison
       const userRoles = user.roles.map(role => role.toLowerCase());
       const requiredRoles = sysRole.map(role => role.toLowerCase());
@@ -49,16 +57,13 @@ const secureAPI = (sysRole = []) => {
       });
 
       if (!isValidRole) {
-        throw new Error("user unauthorized");
+        throw new Error("you don't have permission");
       }
 
-      // Set user info in request
-      req.user = user;
-      req.body.updated_by = user._id;
       next();
-    } catch (err) {
-      console.error('Secure API error:', err);
-      next(err);
+    } catch (e) {
+      console.error('Secure API error:', e);
+      next(e);
     }
   };
 };

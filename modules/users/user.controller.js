@@ -80,7 +80,7 @@ const login = async (payload) => {
     const { email, password } = payload;
     
     // Find user without conditions first
-    const userExists = await Model.findOne({ email });
+    const userExists = await Model.findOne({ email }).select('-password');
     
     if (!userExists) {
       throw new Error("Try using correct email");
@@ -94,19 +94,34 @@ const login = async (payload) => {
       throw new Error("Account is blocked");
     }
     
-    const isValidPw = compareHash(password, userExists.password);
+    // Get password separately to avoid sending it in response
+    const userPassword = await Model.findOne({ email }).select('password');
+    const isValidPw = compareHash(password, userPassword.password);
     if (!isValidPw) {
       throw new Error("Username or password is incorrect");
     }
     
-    const data = {
+    const tokenData = {
       _id: userExists._id,
       name: userExists.name,
       email: userExists.email,
       roles: userExists.roles,
     };
     
-    return genToken(data);
+    // Return both token and user data
+    return {
+      token: genToken(tokenData),
+      user: {
+        _id: userExists._id,
+        name: userExists.name,
+        email: userExists.email,
+        phone: userExists.phone || '',
+        address: userExists.address || '',
+        roles: userExists.roles,
+        createdAt: userExists.createdAt,
+        isActive: userExists.isActive
+      }
+    };
   } catch (error) {
     throw error;
   }
@@ -171,14 +186,84 @@ const changePassword = async ({ email, oldPassword, newPassword }) => {
   return { data: null, msg: "password changed successfully" };
 };
 
-const updateProfile = async (payload) => {
-  const { updated_by: currentUser, ...rest } = payload;
-  return await Model.findOneAndUpdate({ _id: currentUser }, rest, {
-    new: true,
-  }).select("-password"); //special update case using role middleware
+const getProfile = async (userId) => {
+  try {
+    console.log('Getting profile for user:', userId);
+    const user = await Model.findById(userId).select('-password');
+    
+    if (!user) {
+      throw new Error('User not found');
+    }
+    
+    return {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone || '',
+      address: user.address || '',
+      roles: user.roles,
+      createdAt: user.createdAt,
+      isActive: user.isActive
+    };
+  } catch (error) {
+    console.error('Error in getProfile:', error);
+    throw error;
+  }
 };
 
-//Admin controllers
+const updateProfile = async (payload) => {
+  try {
+    console.log('Updating profile for user:', payload.updated_by);
+    const { updated_by, ...updateData } = payload;
+    
+    // Validate user exists
+    const user = await Model.findById(updated_by);
+    if (!user) {
+      throw new Error('User not found');
+    }
+    
+    // Only allow updating certain fields
+    const allowedUpdates = {
+      name: updateData.name,
+      phone: updateData.phone || '',
+      address: updateData.address || ''
+    };
+    
+    console.log('Updating with data:', allowedUpdates);
+    
+    // Use findOneAndUpdate to ensure atomicity
+    const updatedUser = await Model.findOneAndUpdate(
+      { _id: updated_by },
+      { $set: allowedUpdates },
+      { 
+        new: true, // Return updated document
+        runValidators: true // Run model validators
+      }
+    ).select('-password');
+    
+    if (!updatedUser) {
+      throw new Error('Failed to update user');
+    }
+    
+    console.log('Updated user:', updatedUser);
+    
+    // Format response
+    return {
+      _id: updatedUser._id,
+      name: updatedUser.name,
+      email: updatedUser.email,
+      phone: updatedUser.phone || '',
+      address: updatedUser.address || '',
+      roles: updatedUser.roles,
+      createdAt: updatedUser.createdAt,
+      isActive: updatedUser.isActive
+    };
+  } catch (error) {
+    console.error('Error in updateProfile:', error);
+    throw error;
+  }
+};
+
 const resetPassword = async ({ email, newPassword, updated_by }) => {
   //1.check email for user
   const user = await Model.findOne({ email, isActive: true, isBlocked: false });
@@ -355,6 +440,7 @@ module.exports = {
   list,
   getById,
   updateById,
+  getProfile,
   updateProfile,
   refreshToken
 };
