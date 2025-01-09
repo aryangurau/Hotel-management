@@ -10,6 +10,7 @@ const schema = new Schema(
     phone: { type: String, default: '' },
     address: { type: String, default: '' },
     password: { type: String, required: true },
+    profilePicture: { type: String, default: '' },
     roles: { type: [String], enum: ["admin", "user"], default: ["user"] },
     isActive: { type: Boolean, required: true, default: false },
     isBlocked: { type: Boolean, required: true, default: false },

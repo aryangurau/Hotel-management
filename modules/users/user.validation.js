@@ -39,8 +39,18 @@ const validate = async (req, res, next) => {
 
 const validateProfile = async (req, res, next) => {
   try {
-    console.log('Validating profile update:', req.body);
-    await profileSchema.validateAsync(req.body);
+    console.log('Validating profile update data:', req.body);
+    
+    // Extract only the fields we want to validate
+    const dataToValidate = {
+      name: req.body.name,
+      phone: req.body.phone || '',
+      address: req.body.address || ''
+    };
+    
+    console.log('Data to validate:', dataToValidate);
+    
+    await profileSchema.validateAsync(dataToValidate);
     next();
   } catch (err) {
     console.error('Profile validation error:', err);

@@ -154,14 +154,26 @@ router.get("/profile", secureAPI(["admin", "user"]), async (req, res, next) => {
   }
 });
 
-// Update user profile
-router.put("/profile", secureAPI(["admin", "user"]), validateProfile, async (req, res, next) => {
+// Update user profile with picture
+router.put("/profile", secureAPI(["admin", "user"]), upload.single('profilePicture'), validateProfile, async (req, res, next) => {
   try {
-    console.log('Update profile request for user:', req.user._id);
+    console.log('Update profile request received');
+    console.log('Request body:', req.body);
+    console.log('File:', req.file);
+
+    // Parse form data
     const payload = {
       ...req.body,
       updated_by: req.user._id
     };
+
+    // Add profile picture if uploaded
+    if (req.file) {
+      payload.profilePicture = req.file.filename;
+    }
+
+    console.log('Final payload:', payload);
+
     const result = await controller.updateProfile(payload);
     res.json({ data: result, msg: "profile updated successfully" });
   } catch (err) {

@@ -228,6 +228,11 @@ const updateProfile = async (payload) => {
       phone: updateData.phone || '',
       address: updateData.address || ''
     };
+
+    // Add profile picture if it exists
+    if (updateData.profilePicture) {
+      allowedUpdates.profilePicture = updateData.profilePicture;
+    }
     
     console.log('Updating with data:', allowedUpdates);
     
@@ -254,6 +259,7 @@ const updateProfile = async (payload) => {
       email: updatedUser.email,
       phone: updatedUser.phone || '',
       address: updatedUser.address || '',
+      profilePicture: updatedUser.profilePicture || '',
       roles: updatedUser.roles,
       createdAt: updatedUser.createdAt,
       isActive: updatedUser.isActive
