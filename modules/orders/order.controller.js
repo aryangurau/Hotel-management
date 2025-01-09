@@ -71,8 +71,10 @@ const list = async ({ filter = {}, search = {}, page = 1, limit = 10 }) => {
   try {
     console.log('List orders with:', { filter, search, page, limit });
     
+    // Ensure valid pagination values
     const currentPage = Math.max(1, parseInt(page));
-    const skip = (currentPage - 1) * parseInt(limit);
+    const itemsPerPage = Math.min(50, Math.max(5, parseInt(limit))); // Min 5, Max 50
+    const skip = (currentPage - 1) * itemsPerPage;
 
     // Build match conditions
     const matchConditions = {};
@@ -89,54 +91,87 @@ const list = async ({ filter = {}, search = {}, page = 1, limit = 10 }) => {
 
     console.log('Match conditions:', matchConditions);
 
-    // Get total count
-    const total = await Model.countDocuments(matchConditions);
-    
-    if (total === 0) {
-      console.log('No orders found');
-      return {
-        data: [],
-        currentPage: 1,
-        totalPages: 0,
-        total: 0
-      };
-    }
+    // Get total count from both orders and bookings
+    const [orderCount, bookings] = await Promise.all([
+      Model.countDocuments(matchConditions),
+      require('../bookings/booking.model').find({})
+        .populate('roomId', 'name type price status totalGuests')
+        .populate('userId', 'name email phone')
+        .sort({ createdAt: -1 })
+        .lean()
+    ]);
 
-    // Fetch orders with pagination and populate references
-    const orders = await Model.find(matchConditions)
-      .populate({
-        path: 'room',
-        select: 'name type price status totalGuests',
-        model: 'Room'
-      })
-      .populate({
-        path: 'created_by',
-        select: 'name email',
-        model: 'User'
-      })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(parseInt(limit))
-      .lean();
+    // Transform bookings to order format
+    const bookingOrders = bookings.map(booking => ({
+      _id: booking._id,
+      orderNo: booking._id.toString().slice(-8).toUpperCase(),
+      receiver: booking.guestName,
+      room: {
+        _id: booking.roomId?._id,
+        name: booking.roomId?.name || 'N/A',
+        type: booking.roomId?.type || 'N/A',
+        price: booking.roomId?.price || 0,
+        status: booking.roomId?.status || 'N/A',
+        totalGuests: booking.roomId?.totalGuests || 0
+      },
+      amount: booking.totalAmount,
+      status: booking.status.toLowerCase(),
+      arrivalDate: booking.checkIn,
+      departureDate: booking.checkOut,
+      created_by: {
+        _id: booking.userId?._id,
+        name: booking.userId?.name || 'N/A',
+        email: booking.userId?.email || 'N/A',
+        phone: booking.userId?.phone || 'N/A'
+      },
+      updated_by: booking.userId?.email || 'N/A',
+      paymentMethod: booking.paymentMethod?.toLowerCase(),
+      paymentDetails: {
+        status: booking.status === 'CONFIRMED' ? 'paid' : 'pending',
+        paidAt: booking.status === 'CONFIRMED' ? booking.createdAt : null
+      },
+      createdAt: booking.createdAt,
+      updatedAt: booking.updatedAt
+    }));
 
-    console.log('Found orders:', orders.length);
+    // Combine and sort all orders
+    const allOrders = [...bookingOrders];
+    allOrders.sort((a, b) => b.createdAt - a.createdAt);
+
+    // Apply pagination
+    const total = allOrders.length;
+    const paginatedOrders = allOrders.slice(skip, skip + itemsPerPage);
+
+    // Transform for frontend
+    const transformedOrders = paginatedOrders.map(order => ({
+      ...order,
+      checkIn: order.arrivalDate,
+      checkOut: order.departureDate,
+      createdBy: order.created_by,
+      customer: {
+        name: order.receiver,
+        email: order.created_by?.email || order.updated_by,
+        phone: order.created_by?.phone || 'N/A'
+      },
+      paymentStatus: order.paymentDetails?.status || (order.status === 'confirmed' ? 'paid' : 'unpaid')
+    }));
+
+    console.log('Transformed orders:', JSON.stringify(transformedOrders.map(o => ({
+      id: o._id,
+      orderNo: o.orderNo,
+      customer: o.customer,
+      status: o.status
+    })), null, 2));
 
     const response = {
-      data: orders,
-      currentPage,
-      totalPages: Math.ceil(total / parseInt(limit)),
-      total
+      data: transformedOrders,
+      currentPage: Math.min(currentPage, Math.ceil(total / itemsPerPage)),
+      totalPages: Math.ceil(total / itemsPerPage),
+      total,
+      limit: itemsPerPage
     };
 
-    console.log('Sending response:', {
-      currentPage: response.currentPage,
-      totalPages: response.totalPages,
-      total: response.total,
-      orderCount: response.data.length
-    });
-
     return response;
-
   } catch (error) {
     console.error('Error in list orders:', error.stack);
     throw error;

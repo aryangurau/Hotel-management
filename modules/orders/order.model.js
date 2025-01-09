@@ -15,7 +15,9 @@ const orderSchema = new mongoose.Schema(
     },
     receiver: {
       type: String,
-      required: true
+      required: true,
+      trim: true,
+      default: 'Guest'
     },
     room: {
       type: mongoose.Schema.Types.ObjectId,
@@ -50,12 +52,19 @@ const orderSchema = new mongoose.Schema(
     },
     paymentMethod: {
       type: String,
-      enum: ["credit_card", "debit_card", "esewa", "khalti"],
+      enum: ["esewa", "khalti", "bank_transfer", "cash"],
       required: true
     },
     paymentDetails: {
-      cardLastFour: String,
-      paidAt: Date
+      status: {
+        type: String,
+        enum: ["pending", "paid", "failed", "refunded"],
+        default: "pending"
+      },
+      paidAt: Date,
+      transactionId: String,
+      refundedAt: Date,
+      refundTransactionId: String
     }
   },
   {
