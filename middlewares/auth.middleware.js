@@ -3,20 +3,20 @@ const User = require('../modules/users/user.model');
 
 const isUser = async (req, res, next) => {
     try {
-        // Get token from header
-        const token = req.headers.authorization?.split(' ')[1];
+        // Get token from header (support both authorization and access_token headers)
+        const token = req.headers.authorization?.split(' ')[1] || req.headers.access_token;
         if (!token) {
             throw new Error('No token provided');
         }
 
         // Verify token
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        if (!decoded?._id) {
+        if (!decoded?.email) {
             throw new Error('Invalid token');
         }
 
         // Get user
-        const user = await User.findById(decoded._id);
+        const user = await User.findOne({ email: decoded.email });
         if (!user) {
             throw new Error('User not found');
         }
@@ -25,6 +25,7 @@ const isUser = async (req, res, next) => {
         req.user = user;
         next();
     } catch (error) {
+        console.error('Auth middleware error:', error);
         return res.status(401).json({
             success: false,
             message: error.message || 'Authentication failed'

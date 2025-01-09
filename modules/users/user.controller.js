@@ -1,6 +1,6 @@
 const Model = require("./user.model");
 const { genHash, compareHash } = require("../../utils/secure");
-const { genOTP, genToken } = require("../../utils/token");
+const { genOTP, genToken, verifyToken } = require("../../utils/token");
 const { sendEmail } = require("../../services/mailer");
 const { boolean } = require("joi");
 
@@ -311,29 +311,36 @@ const list = async ({ filter, search, page = 1, limit = 10 }) => {
   }
 };
 
-//advance data operation
+const refreshToken = async (oldToken) => {
+  try {
+    // Verify the old token
+    const decoded = verifyToken(oldToken);
+    
+    // Get user data
+    const user = await Model.findOne({
+      email: decoded.email,
+      isActive: true,
+      isBlocked: false
+    });
+    
+    if (!user) {
+      throw new Error('User not found');
+    }
+    
+    // Generate new token
+    const token = genToken({
+      id: user._id,
+      email: user.email,
+      roles: user.roles
+    });
+    
+    return token;
+  } catch (error) {
+    console.error('Token refresh error:', error);
+    throw new Error('Invalid or expired token');
+  }
+};
 
-/*
-const getUserByID = async ({ userId }) => {
-  const user = await Model.findOne({ userId, isActive: true });
-  // console.log(user);
-  if (!user) throw new Error("user not found");
-  // return Model.findOne({ number });
-  return { data: user, msg: "user found sucessfully" };
-};
-const updateByID = async ({ userId, newName }) => {
-  const user = await Model.findOne({ userId, isActive: true });
-  // console.log(user);
-  if (!user) throw new Error("user not found");
-  const updatedUser = await Model.findOneAndUpdate(
-    { userId },
-    { name: newName },
-    { new: true }
-  );
-  if (!updatedUser) throw new Error("user not updated");
-  return { data: updatedUser?.name, msg: "user updated  sucessfully" };
-};
-*/
 module.exports = {
   create,
   register,
@@ -349,4 +356,5 @@ module.exports = {
   getById,
   updateById,
   updateProfile,
+  refreshToken
 };

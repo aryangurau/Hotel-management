@@ -163,6 +163,26 @@ router.put("/:id", secureAPI(["admin"]), async (req, res, next) => {
   }
 });
 
+// Add refresh token endpoint
+router.post("/refresh-token", async (req, res, next) => {
+  try {
+    console.log('Refresh token request received');
+    const { access_token } = req.headers;
+    
+    if (!access_token) {
+      throw new Error('No token provided');
+    }
+    
+    // Generate new token
+    const result = await controller.refreshToken(access_token);
+    console.log('Token refreshed successfully');
+    res.json({ data: result, msg: "Token refreshed successfully" });
+  } catch (err) {
+    console.error('Token refresh failed:', err);
+    next(err);
+  }
+});
+
 /*
 router.post("/getUserByID", async (req, res, next) => {
   try {
