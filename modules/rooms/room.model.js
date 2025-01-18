@@ -4,6 +4,7 @@ const roomSchema = new Schema(
   {
     name: { type: String, required: true, unique: true },
     created_by: { type: ObjectId, ref: "User", required: true },
+    updated_by: { type: ObjectId, ref: "User", required: true },
     type: {
       type: String,
       enum: ["single", "double", "suite"],
@@ -12,7 +13,8 @@ const roomSchema = new Schema(
     price: {
       type: Number,
       min: [750, "Minimum room price is 750"],
-      max: [10000, "Minimum room price is 750"],
+      max: [10000, "Maximum room price is 10000"],
+      required: true
     },
     status: {
       type: String,
@@ -21,9 +23,13 @@ const roomSchema = new Schema(
     },
     totalGuests: {
       type: Number,
-      min: [1, "Minimum accomodation is 1"],
-      max: [5, "Maximum accomodation is 5"],
+      min: [1, "Minimum accommodation is 1"],
+      max: [5, "Maximum accommodation is 5"],
+      required: true
     },
+    description: { type: String },
+    amenities: [{ type: String }],
+    images: [{ type: String }]
   },
   {
     timestamps: true,

@@ -3,6 +3,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const morgan = require("morgan");
 const cors = require("cors");
+const path = require("path");
 const app = express();
 const PORT = Number(process.env.PORT) || 4999;
 const indexRouter = require("./routes");
@@ -28,6 +29,10 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Serve static files
+app.use("/resources", express.static("public"));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
 // Basic request logging
 app.use((req, res, next) => {
   console.log(`${req.method} ${req.path}`);
@@ -37,7 +42,6 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use("/resources", express.static("public"));
 app.use(morgan("tiny"));
 app.use("/", indexRouter);
 
