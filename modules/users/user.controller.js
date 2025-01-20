@@ -432,21 +432,35 @@ const refreshToken = async (oldToken) => {
   }
 };
 
+const deleteUser = async (userId) => {
+  const user = await Model.findById(userId);
+  if (!user) throw new Error("User not found");
+  
+  // Check if user has any active bookings
+  const bookings = await require('../bookings/booking.model').find({ userId: userId, status: { $in: ['pending', 'confirmed'] } });
+  if (bookings.length > 0) {
+    throw new Error("Cannot delete user with active bookings");
+  }
+  
+  await Model.findByIdAndDelete(userId);
+  return { msg: "User deleted successfully" };
+};
+
 module.exports = {
   create,
   register,
   login,
-  genEmailToken,
-  verifyEmailToken,
-  genForgetPasswordToken,
-  verifyForgetPasswordToken,
-  changePassword,
-  resetPassword,
-  blockUser,
   list,
   getById,
   updateById,
+  blockUser,
+  resetPassword,
   getProfile,
   updateProfile,
-  refreshToken
+  genForgetPasswordToken,
+  verifyForgetPasswordToken,
+  changePassword,
+  verifyEmailToken,
+  refreshToken,
+  deleteUser
 };

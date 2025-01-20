@@ -214,6 +214,16 @@ router.post("/refresh-token", async (req, res, next) => {
   }
 });
 
+// Delete user endpoint
+router.delete("/:userId", secureAPI(["admin"]), async (req, res, next) => {
+  try {
+    const result = await controller.deleteUser(req.params.userId);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
 /*
 router.post("/getUserByID", async (req, res, next) => {
   try {
