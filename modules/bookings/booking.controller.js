@@ -5,7 +5,19 @@ const User = require('../users/user.model');
 const createBooking = async (req, res) => {
     try {
         const { roomId, checkIn, checkOut, totalAmount, guestName, phoneNumber, guests, paymentMethod } = req.body;
-        const userId = req.user._id;
+        const userId = req.user._id;  // Get userId from auth token
+
+        // Log the user and booking details
+        console.log('Creating booking for user:', userId, 'with data:', {
+            roomId,
+            checkIn,
+            checkOut,
+            totalAmount,
+            guestName,
+            phoneNumber,
+            guests,
+            paymentMethod
+        });
 
         // Validate room exists
         const room = await Room.findById(roomId);
